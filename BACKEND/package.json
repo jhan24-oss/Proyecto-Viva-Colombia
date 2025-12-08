@@ -1,28 +1,29 @@
 {
-  "name": "viva-colombia-backend",
+  "name": "backend-api",
   "version": "1.0.0",
-  "description": "API backend para Proyecto Viva Colombia (Express + MySQL)",
-  "main": "index.js",
+  "description": "API REST con Node.js, Express y MySQL",
+  "main": "server.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
+  "keywords": [
+    "api",
+    "rest",
+    "nodejs",
+    "express",
+    "mysql"
+  ],
   "author": "",
-  "license": "MIT",
+  "license": "ISC",
   "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "body-parser": "^2.2.1",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
-    "dotenv": "^16.6.1",
     "express": "^4.22.1",
-    "helmet": "^8.1.0",
-    "joi": "^18.0.2",
-    "morgan": "^1.10.1",
     "mysql2": "^3.15.3"
   },
   "devDependencies": {
-    "nodemon": "^2.0.22"
+    "nodemon": "^3.1.11"
   },
-  "keywords": [],
   "type": "commonjs"
 }

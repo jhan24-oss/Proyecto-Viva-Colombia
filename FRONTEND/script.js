@@ -58,23 +58,51 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
-  if (authSubmit) {
-    authSubmit.addEventListener('click', () => {
+ if (authSubmit) {
+  authSubmit.addEventListener('click', async () => {
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+
+    const res = await fetch('http://localhost:4000/api/usuarios/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
+    const result = await res.json();
+    if (result.ok) {
       alert('Sesión iniciada');
       authModal.classList.add('hidden');
-    });
-  }
+      localStorage.setItem('usuario_id', result.usuario.id);
+    } else {
+      alert(result.error);
+    }
+  });
+}
 
   // Contacto
-  const contactForm = document.getElementById('contactForm');
-  if (contactForm) {
-    contactForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      alert('Mensaje enviado con éxito');
-      e.target.reset();
-    });
-  }
+ if (contactForm) {
+  contactForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = {
+      nombre: document.getElementById('contactNombre').value,
+      email: document.getElementById('contactEmail').value,
+      telefono: document.getElementById('contactTelefono').value,
+      asunto: document.getElementById('contactAsunto').value,
+      mensaje: document.getElementById('contactMensaje').value
+    };
 
+    const res = await fetch('http://localhost:4000/api/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    const result = await res.json();
+    alert(result.mensaje || result.error);
+    e.target.reset();
+  });
+}
 
 // ------------------ DATOS COMPLETOS ------------------
 
@@ -269,14 +297,38 @@ const accommodations = [
     });
   }
 
-  const confirmarReservaBtn = document.getElementById('confirmarReserva');
   if (confirmarReservaBtn) {
-    confirmarReservaBtn.addEventListener('click', () => {
-      const pago = document.querySelector('input[name="pago"]:checked');
-      if (!pago) {
-        alert('Por favor selecciona un método de pago');
-        return;
-      }
+  confirmarReservaBtn.addEventListener('click', async () => {
+    const pago = document.querySelector('input[name="pago"]:checked');
+    if (!pago) {
+      alert('Por favor selecciona un método de pago');
+      return;
+    }
+
+    const usuario_id = localStorage.getItem('usuario_id') || 1;
+    const data = {
+      usuario_id,
+      destino: document.getElementById('reserva-titulo').textContent.replace('Reservar: ', ''),
+      fecha: document.getElementById('fecha').value,
+      categoria: document.querySelector('input[name="categoria"]:checked').value,
+      aerolinea: document.getElementById('aerolinea').value,
+      total_cop: 500000, // puedes calcularlo dinámicamente
+      metodo_pago: pago.value
+    };
+
+    const res = await fetch('http://localhost:4000/api/reservas/destino', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    const result = await res.json();
+    alert(result.mensaje || result.error);
+
+    document.getElementById('reserva').classList.add('hidden');
+    document.getElementById('confirmacion').classList.remove('hidden');
+  });
+}
 
       // Mostrar confirmación y resumir método de pago
       document.getElementById('reserva').classList.add('hidden');
@@ -287,7 +339,7 @@ const accommodations = [
       const msgEl = document.getElementById('confirmacion-mensaje');
       if (msgEl) msgEl.textContent = `Recibirás un correo con los detalles de tu viaje. ${destinoName} — ${totalText} • Pago: ${pagoText}`;
     });
-  }
+
 
   // Visual: marcar tarjeta de pago seleccionada en modal de destinos
   (function attachPaymentOptionHandlers(){
@@ -549,20 +601,44 @@ const accommodations = [
   }
 
   // Confirmar reserva de alojamiento
-  const confirmarReservaAlojamientoBtn = document.getElementById('confirmarReservaAlojamiento');
-  if (confirmarReservaAlojamientoBtn) {
-    confirmarReservaAlojamientoBtn.addEventListener('click', () => {
-      const pagoAlojamiento = document.querySelector('input[name="pago-alojamiento"]:checked');
-      if (!pagoAlojamiento) {
-        alert('Por favor selecciona un método de pago');
-        return;
-      }
+ if (confirmarReservaAlojamientoBtn) {
+  confirmarReservaAlojamientoBtn.addEventListener('click', async () => {
+    const pagoAlojamiento = document.querySelector('input[name="pago-alojamiento"]:checked');
+    if (!pagoAlojamiento) {
+      alert('Por favor selecciona un método de pago');
+      return;
+    }
+
+    const usuario_id = localStorage.getItem('usuario_id') || 1;
+    const data = {
+      usuario_id,
+      alojamiento: window.accommodationData.name,
+      ubicacion: window.accommodationData.location,
+      check_in: document.getElementById('fecha-ingreso').value,
+      check_out: document.getElementById('fecha-salida').value,
+      huespedes: document.getElementById('numero-huespedes').value,
+      total_cop: window.accommodationData.total,
+      metodo_pago: pagoAlojamiento.value
+    };
+
+    const res = await fetch('http://localhost:4000/api/reservas/alojamiento', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    const result = await res.json();
+    alert(result.mensaje || result.error);
+
+    document.getElementById('reservaAlojamiento').classList.add('hidden');
+    document.getElementById('confirmacionAlojamiento').classList.remove('hidden');
+  });
+}
+
 
       // Cerrar modal de reserva y mostrar confirmación
       document.getElementById('reservaAlojamiento').classList.add('hidden');
       document.getElementById('confirmacionAlojamiento').classList.remove('hidden');
-    });
-  }
 
   // Cerrar modal de reserva de alojamiento
   const cerrarReservaAlojamiento = document.getElementById('cerrarReservaAlojamiento');
@@ -616,8 +692,3 @@ const accommodations = [
       }
     }
   }
-
-});
-
-// (El control de apertura/flujo del modal de destinos se maneja dentro de DOMContentLoaded)
-
