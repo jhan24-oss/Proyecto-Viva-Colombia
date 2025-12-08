@@ -20,7 +20,9 @@
       <li><a href="#eventos">Eventos</a></li>
       <li><a href="#contactanos">Contáctanos</a></li>
     </ul>
-    <button id="loginBtn" class="navbar-login">Iniciar Sesión</button>
+    <div class="navbar-actions">
+      <button id="loginBtn" class="navbar-login">Iniciar Sesión</button>
+    </div>
   </nav>
 </header>
 
@@ -211,14 +213,14 @@
   <h3 class="categoria-titulo">🏨 Hoteles</h3>
   <div class="alojamientos-grid">
     <div class="alojamiento-card">
-      <img src="https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/7f/9d/0f/hotel.jpg" alt="Hotel Boutique Cartagena">
+      <img src="https://dynamic-media-cdn.tripadvisor.com/media/photo-o/1a/7f/9d/0f/hotel.jpg" alt="Hotel Boutique Cartagena" onerror="this.src='https://via.placeholder.com/600x400?text=Imagen+no+disponible'; this.onerror=null;">
       <h4>Hotel Boutique Cartagena</h4>
       <p>📍 Cartagena, Bolívar</p>
       <p>Un elegante hotel con vista al mar, habitaciones modernas y servicio de lujo para disfrutar la magia del Caribe.</p>
       <button class="reservar-btn">Reservar</button>
     </div>
     <div class="alojamiento-card">
-      <img src="https://cf.bstatic.com/xdata/images/hotel/max1024x768/123456789.jpg" alt="Hotel en Bogotá">
+      <img src="https://cf.bstatic.com/xdata/images/hotel/max1024x768/123456789.jpg" alt="Hotel en Bogotá" onerror="this.src='https://via.placeholder.com/600x400?text=Imagen+no+disponible'; this.onerror=null;">
       <h4>Hotel Virrey Bogotá</h4>
       <p>📍 Bogotá, D.C.</p>
       <p>Ubicado en el corazón de la capital, combina diseño contemporáneo con gastronomía innovadora y comodidad total.</p>
@@ -635,13 +637,65 @@
     <p>© 2024 Viva Colombia. Todos los derechos reservados.</p>
   </footer>
 
-  <!-- Modal de Login -->
+  <!-- Modal de Login / Registro -->
   <div id="authModal" class="modal hidden">
-    <div class="modal-content">
-      <h3>Iniciar Sesión</h3>
-      <input type="email" placeholder="Correo">
-      <input type="password" placeholder="Contraseña">
-      <button id="authSubmit">Continuar</button>
+    <div class="modal-overlay" id="authOverlay"></div>
+    <div class="modal-content auth-modal-content">
+      <button class="modal-close" id="authClose">×</button>
+
+      <!-- Login Panel -->
+      <div id="loginPanel" class="auth-panel auth-left">
+        <h2>Bienvenido de vuelta</h2>
+        <p>Ingresa a tu cuenta para continuar</p>
+        <label>Correo electrónico</label>
+        <div class="input-icon">
+          <span class="icon icon-mail" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6.5C3 5.67157 3.67157 5 4.5 5H19.5C20.3284 5 21 5.67157 21 6.5V17.5C21 18.3284 20.3284 19 19.5 19H4.5C3.67157 19 3 18.3284 3 17.5V6.5Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 6.5L12 12.5L3 6.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <input id="loginEmail" type="email" placeholder="tu@email.com">
+        </div>
+        <label>Contraseña</label>
+        <div class="input-icon">
+          <span class="icon icon-lock" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M7 11V8a5 5 0 0110 0v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <input id="loginPassword" type="password" placeholder="Contraseña">
+        </div>
+        <button id="authSubmit" class="btn-primary">Continuar</button>
+        <button id="toRegister" class="btn-link">¿No tienes cuenta? Regístrate</button>
+        <div id="authMessage" class="auth-msg hidden" aria-live="polite"></div>
+      </div>
+
+      <!-- Register Panel -->
+      <div id="registerPanel" class="auth-panel auth-right hidden">
+        <h2>Únete a Viva Colombia</h2>
+        <p>Crea tu cuenta y descubre Colombia</p>
+        <div class="grid-2">
+          <input id="regNombres" type="text" placeholder="Nombres">
+          <input id="regApellidos" type="text" placeholder="Apellidos">
+        </div>
+        <div class="input-icon">
+          <span class="icon icon-mail" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6.5C3 5.67157 3.67157 5 4.5 5H19.5C20.3284 5 21 5.67157 21 6.5V17.5C21 18.3284 20.3284 19 19.5 19H4.5C3.67157 19 3 18.3284 3 17.5V6.5Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 6.5L12 12.5L3 6.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <input id="regEmail" type="email" placeholder="tu@email.com">
+        </div>
+        <div class="input-icon">
+          <span class="icon icon-lock" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M7 11V8a5 5 0 0110 0v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <input id="regPassword" type="password" placeholder="Contraseña">
+        </div>
+        <div class="input-icon">
+          <span class="icon icon-phone" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 16.92V20a2 2 0 01-2.18 2 19.86 19.86 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.86 19.86 0 012 4.18 2 2 0 014 2h3.09a2 2 0 011.93 1.44c.12.48.3.95.54 1.4a2 2 0 01-.45 2.11L7.91 8.91c1.74 3.48 4.5 6.24 7.98 7.98l1.96-1.96a2 2 0 012.11-.45c.45.24.92.42 1.4.54A2 2 0 0122 16.92z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <input id="regTelefono" type="tel" placeholder="Teléfono (opcional)">
+        </div>
+        <button id="registerSubmit" class="btn-primary">Crear cuenta</button>
+        <button id="toLogin" class="btn-link">Ya tengo cuenta</button>
+        <div id="registerMessage" class="auth-msg hidden" aria-live="polite"></div>
+      </div>
     </div>
   </div>
 
@@ -774,14 +828,18 @@
   </div>
 </section>
 
-<section id="confirmacion" class="confirmacion-modal-overlay hidden">
-  <div class="confirmacion-modal">
-    <button class="modal-close" id="cerrarConfirmacion">×</button>
-    
-    <div class="confirmacion-header">
-      <h2>¡Reserva Confirmada!</h2>
-      <p>Tu viaje está listo</p>
-    </div>
+  <!-- Modal de Confirmación -->
+<div id="confirmacion" class="modal hidden">
+  <div class="modal-content">
+    <h2>¡Reserva Confirmada!</h2>
+    <p>Tu viaje está listo</p>
+    <div class="check-icon">✔️</div>
+    <p>¡Gracias por tu reserva!</p>
+    <p>Recibirás un correo con los detalles de tu viaje.</p>
+    <button id="cerrarConfirmacion">Cerrar</button>
+  </div>
+</div>
+
 
     <div class="confirmacion-body">
       <div class="confirmacion-icono" aria-hidden="true">

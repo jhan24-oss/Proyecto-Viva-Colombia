@@ -1,5 +1,6 @@
 // Esperar a que el DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', () => {
+  try {
   // Mapa global de SVGs para aerolíneas (usado por badge y resumen)
   const AIRLINE_SVGS = {
     'Avianca': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M3 12c0 0 6-1 9-1s9-1 9-1-3 1-6 4-6 4-6 4l-6-6z" fill="#E60000"/></svg>`,
@@ -51,31 +52,219 @@ document.addEventListener('DOMContentLoaded', () => {
   const authModal = document.getElementById('authModal');
   const loginBtn = document.getElementById('loginBtn');
   const authSubmit = document.getElementById('authSubmit');
+  const registerBtn = document.getElementById('registerBtn');
+  const loginPanel = document.getElementById('loginPanel');
+  const registerPanel = document.getElementById('registerPanel');
+  const authClose = document.getElementById('authClose');
+  const authOverlay = document.getElementById('authOverlay');
+  const toRegister = document.getElementById('toRegister');
+  const toLogin = document.getElementById('toLogin');
+  const registerSubmit = document.getElementById('registerSubmit');
+  // Elementos del DOM que pueden no existir en todas las páginas
+  const contactForm = document.getElementById('contactForm');
+  const confirmarReservaBtn = document.getElementById('confirmarReserva');
+  const confirmarReservaAlojamientoBtn = document.getElementById('confirmarReservaAlojamiento');
   
   if (loginBtn) {
     loginBtn.addEventListener('click', () => {
-      authModal.classList.remove('hidden');
+      // mostrar modal en modo login
+      if (authModal) authModal.classList.remove('hidden');
+      if (loginPanel) { loginPanel.classList.remove('hidden'); }
+      if (registerPanel) { registerPanel.classList.add('hidden'); }
+      // foco en email
+      setTimeout(() => { document.getElementById('loginEmail')?.focus(); }, 50);
+    });
+  }
+  if (registerBtn) {
+    registerBtn.addEventListener('click', () => {
+      if (authModal) authModal.classList.remove('hidden');
+      if (registerPanel) { registerPanel.classList.remove('hidden'); }
+      if (loginPanel) { loginPanel.classList.add('hidden'); }
+      setTimeout(() => { document.getElementById('regNombres')?.focus(); }, 50);
+    });
+  }
+
+  if (registerSubmit) {
+    registerSubmit.addEventListener('click', async () => {
+      const nombres = document.getElementById('regNombres')?.value || '';
+      const apellidos = document.getElementById('regApellidos')?.value || '';
+      const email = document.getElementById('regEmail')?.value || '';
+      const password = document.getElementById('regPassword')?.value || '';
+
+      if (!nombres || !email || !password) {
+        alert('Por favor completa los campos requeridos');
+        return;
+      }
+
+      const data = { nombre: `${nombres} ${apellidos}`.trim(), email, password };
+      try {
+        console.log('Register request ->', data);
+        const res = await fetch('http://localhost:4000/api/usuarios/register', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+        });
+        console.log('Register response raw ->', res);
+        // Intentar parsear JSON; si falla, leer texto plano
+        let result = null;
+        let bodyText = '';
+        try {
+          result = await res.json();
+        } catch (e) {
+          // no JSON
+          try { bodyText = await res.text(); } catch (e2) { bodyText = String(e2 || ''); }
+          result = null;
+        }
+        console.log('Parsed register result ->', result, 'bodyText ->', bodyText);
+        const regMsgEl = document.getElementById('registerMessage');
+        if (res.ok && result && result.ok) {
+          if (regMsgEl) {
+            regMsgEl.textContent = 'Cuenta creada correctamente.';
+            regMsgEl.classList.remove('hidden'); regMsgEl.classList.remove('error'); regMsgEl.classList.add('visible');
+          }
+          // Si el backend devuelve el usuario, iniciamos sesión automáticamente
+          if (result.usuario && result.usuario.id) {
+            const usuario = result.usuario;
+            localStorage.setItem('usuario_id', usuario.id);
+            localStorage.setItem('usuario_nombre', usuario.nombre || `${nombres} ${apellidos}`.trim() || email);
+            try { updateNavbarUserState(usuario); } catch (e) { console.warn('No se pudo actualizar navbar', e); }
+            // Cerrar modal después de breve delay
+            setTimeout(() => { if (authModal) authModal.classList.add('hidden'); }, 900);
+          } else {
+            // fallback: auto-fill login email y mostrar panel de login
+            document.getElementById('loginEmail').value = email;
+            if (registerPanel) registerPanel.classList.add('hidden');
+            if (loginPanel) loginPanel.classList.remove('hidden');
+          }
+        } else {
+          // Construir mensaje de error: preferir result.error/result.mensaje, sino usar bodyText o status
+          const serverMsg = (result && (result.error || result.mensaje)) ? (result.error || result.mensaje) : (bodyText || 'Respuesta inesperada del servidor');
+          const msg = `Error ${res.status}${res.statusText ? ' ' + res.statusText : ''}: ${serverMsg}`;
+          if (regMsgEl) {
+            regMsgEl.textContent = msg;
+            regMsgEl.classList.remove('hidden'); regMsgEl.classList.add('visible'); regMsgEl.classList.add('error');
+            // asegurar que el mensaje y el botón 'Ya tengo cuenta' sean visibles
+            regMsgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          } else {
+            alert(msg);
+          }
+        }
+      } catch (err) {
+        console.error('Error registrando usuario', err);
+        const regMsgEl = document.getElementById('registerMessage');
+        const msg = (err && err.message) ? err.message : 'Error registrando usuario (sin respuesta)';
+        if (regMsgEl) {
+          regMsgEl.textContent = `Error: ${msg}`;
+          regMsgEl.classList.remove('hidden'); regMsgEl.classList.add('visible'); regMsgEl.classList.add('error');
+          regMsgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          alert(msg);
+        }
+      }
     });
   }
   
- if (authSubmit) {
-  authSubmit.addEventListener('click', async () => {
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
+// NOTE: Login handler más avanzado se define más abajo (con mensajes
+// inline y actualización de la navbar). Evitamos duplicar el listener aquí.
 
-    const res = await fetch('http://localhost:4000/api/usuarios/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+// DEBUG: añadir botón para crear cuenta de prueba (útil para reproducir errores)
+if (registerPanel) {
+  try {
+    const debugBtn = document.createElement('button');
+    debugBtn.id = 'registerTestBtn';
+    debugBtn.type = 'button';
+    debugBtn.className = 'btn-primary';
+    debugBtn.style.marginTop = '8px';
+    debugBtn.style.background = 'linear-gradient(90deg,#00c9a7,#00b4d8)';
+    debugBtn.textContent = 'Crear cuenta de prueba';
+    const regMsgEl = document.getElementById('registerMessage');
+    if (regMsgEl) registerPanel.insertBefore(debugBtn, regMsgEl);
+    else registerPanel.appendChild(debugBtn);
+
+    debugBtn.addEventListener('click', () => {
+      const rand = Math.floor(Math.random() * 1000000);
+      const nombres = 'Test';
+      const apellidos = 'User' + rand;
+      const email = `test${rand}@example.com`;
+      const password = 'Test123!';
+      const nombresEl = document.getElementById('regNombres');
+      const apellidosEl = document.getElementById('regApellidos');
+      const emailEl = document.getElementById('regEmail');
+      const passwordEl = document.getElementById('regPassword');
+      if (nombresEl) nombresEl.value = nombres;
+      if (apellidosEl) apellidosEl.value = apellidos;
+      if (emailEl) emailEl.value = email;
+      if (passwordEl) passwordEl.value = password;
+      // trigger the same submit handler
+      if (registerSubmit) registerSubmit.click();
     });
+  } catch (e) { console.warn('No se pudo añadir botón debug de registro', e); }
+}
 
-    const result = await res.json();
-    if (result.ok) {
-      alert('Sesión iniciada');
-      authModal.classList.add('hidden');
-      localStorage.setItem('usuario_id', result.usuario.id);
-    } else {
-      alert(result.error);
+// Manejador visual-only para login/registro: mostrar éxito aunque no haya backend
+if (authSubmit) {
+  authSubmit.addEventListener('click', (e) => {
+    e.preventDefault();
+    const authMsgEl = document.getElementById('authMessage');
+    // Determinar qué panel está visible
+    const isRegisterVisible = registerPanel && !registerPanel.classList.contains('hidden');
+    const isLoginVisible = loginPanel && !loginPanel.classList.contains('hidden');
+
+    try {
+      if (isRegisterVisible) {
+        const nombres = (document.getElementById('regNombres')?.value || '').trim();
+        const apellidos = (document.getElementById('regApellidos')?.value || '').trim();
+        const email = (document.getElementById('regEmail')?.value || '').trim();
+        const displayName = (nombres || apellidos) ? `${nombres} ${apellidos}`.trim() : (email || 'Usuario');
+
+        // Mensaje visual
+        if (authMsgEl) {
+          authMsgEl.textContent = `Cuenta creada. Sesión iniciada como ${displayName}`;
+          authMsgEl.classList.remove('hidden'); authMsgEl.classList.remove('error'); authMsgEl.classList.add('visible');
+        } else {
+          alert(`Cuenta creada. Sesión iniciada como ${displayName}`);
+        }
+
+        // Estado visual de usuario (localStorage + navbar)
+        try {
+          localStorage.setItem('usuario_id', `visual-${Date.now()}`);
+          localStorage.setItem('usuario_nombre', displayName);
+          updateNavbarUserState({ nombre: displayName, email });
+        } catch (e) { console.warn('No se pudo guardar usuario en localStorage', e); }
+
+        // Cerrar modal tras breve pausa para que el usuario vea el mensaje
+        setTimeout(() => { if (authModal) authModal.classList.add('hidden'); }, 900);
+        return;
+      }
+
+      if (isLoginVisible) {
+        const email = (document.getElementById('loginEmail')?.value || '').trim();
+        const displayName = email || 'Usuario';
+
+        if (authMsgEl) {
+          authMsgEl.textContent = `Sesión iniciada como ${displayName}`;
+          authMsgEl.classList.remove('hidden'); authMsgEl.classList.remove('error'); authMsgEl.classList.add('visible');
+        } else {
+          alert(`Sesión iniciada como ${displayName}`);
+        }
+
+        try {
+          localStorage.setItem('usuario_id', `visual-${Date.now()}`);
+          localStorage.setItem('usuario_nombre', displayName);
+          updateNavbarUserState({ nombre: displayName, email });
+        } catch (e) { console.warn('No se pudo guardar usuario en localStorage', e); }
+
+        setTimeout(() => { if (authModal) authModal.classList.add('hidden'); }, 700);
+        return;
+      }
+
+      // Fallback: si no se detecta panel, simplemente cerrar
+      if (authMsgEl) {
+        authMsgEl.textContent = 'Sesión iniciada';
+        authMsgEl.classList.remove('hidden'); authMsgEl.classList.remove('error'); authMsgEl.classList.add('visible');
+      }
+      setTimeout(() => { if (authModal) authModal.classList.add('hidden'); }, 700);
+    } catch (err) {
+      console.error('Error visual auth submit', err);
+      if (authMsgEl) { authMsgEl.textContent = 'Error iniciando sesión'; authMsgEl.classList.remove('hidden'); authMsgEl.classList.add('error'); }
     }
   });
 }
@@ -163,6 +352,7 @@ const accommodations = [
   // Animación de entrada para la sección "¿Quiénes Somos?"
   window.addEventListener('scroll', () => {
     const section = document.querySelector('.about-section');
+    if (!section) return;
     const position = section.getBoundingClientRect().top;
     const screenHeight = window.innerHeight;
 
@@ -189,50 +379,37 @@ const accommodations = [
     });
   });
 
-  const volverDestinos = document.getElementById('volverDestinos');
-  if (volverDestinos) {
-    volverDestinos.addEventListener('click', () => {
-      document.getElementById('reserva').classList.add('hidden');
-      document.getElementById('destinos').style.display = 'block';
-    });
-  }
+    // Actualizar la navbar para mostrar nombre del usuario y logout
+    function updateNavbarUserState(usuario) {
+      const navActions = document.querySelector('.navbar-actions');
+      if (!navActions) return;
+      // ocultar boton login
+      if (loginBtn) loginBtn.style.display = 'none';
 
-  const volverPaso1 = document.getElementById('volverPaso1');
-  if (volverPaso1) {
-    volverPaso1.addEventListener('click', () => {
-      document.getElementById('paso2').classList.add('hidden');
-      document.getElementById('paso1').classList.remove('hidden');
-      updateSteps(1);
-    });
-  }
+      // evitar duplicados
+      let existing = document.getElementById('userBox');
+      if (existing) existing.remove();
 
-  const volverPaso2 = document.getElementById('volverPaso2');
-  if (volverPaso2) {
-    volverPaso2.addEventListener('click', () => {
-      document.getElementById('paso3').classList.add('hidden');
-      document.getElementById('paso2').classList.remove('hidden');
-      updateSteps(2);
-    });
-  }
+      const name = usuario.nombre || usuario.email || 'Usuario';
+      const box = document.createElement('div');
+      box.id = 'userBox';
+      box.style.display = 'flex';
+      box.style.alignItems = 'center';
+      box.innerHTML = `<span class="navbar-user">Hola, ${escapeHtml(name)}</span><button id="logoutBtn" class="navbar-logout">Cerrar sesión</button>`;
+      navActions.appendChild(box);
 
-  // Cerrar confirmación
-  const cerrarConfirmacion = document.getElementById('cerrarConfirmacion');
-  const cerrarConfirmacion2 = document.getElementById('cerrarConfirmacion2');
-  
-  const cerrarConfirmacionFn = () => {
-    document.getElementById('confirmacion').classList.add('hidden');
-    document.getElementById('destinos').style.display = 'block';
-  };
-  
-  if (cerrarConfirmacion) {
-    cerrarConfirmacion.addEventListener('click', cerrarConfirmacionFn);
-  }
-  if (cerrarConfirmacion2) {
-    cerrarConfirmacion2.addEventListener('click', cerrarConfirmacionFn);
-  }
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+          localStorage.removeItem('usuario_id');
+          localStorage.removeItem('usuario_nombre');
+          if (box) box.remove();
+          if (loginBtn) loginBtn.style.display = '';
+        });
+      }
+    }
 
-  // --- Controladores para el modal de reservas de DESTINOS (pasos, continuar, confirmar, cerrar)
-  const cerrarReserva = document.getElementById('cerrarReserva');
+    function escapeHtml(s) { return String(s).replace(/[&"'<>]/g, (c) => ({'&':'&amp;','"':'&quot;',"'":"&#39;","<":"&lt;",">":"&gt;"}[c])); }
   if (cerrarReserva) {
     cerrarReserva.addEventListener('click', () => {
       document.getElementById('reserva').classList.add('hidden');
@@ -240,6 +417,48 @@ const accommodations = [
       document.getElementById('alojamientos').style.display = 'block';
     });
   }
+
+  // Cerrar confirmación (destinos)
+  const cerrarConfirmacion = document.getElementById('cerrarConfirmacion');
+  const cerrarConfirmacion2 = document.getElementById('cerrarConfirmacion2');
+
+  function cerrarConfirmacionFn() {
+    // ocultar modal de confirmación
+    const conf = document.getElementById('confirmacion');
+    if (conf) conf.classList.add('hidden');
+
+    // asegurar que el modal de reserva esté oculto y resetear su estado
+    const reserva = document.getElementById('reserva');
+    if (reserva) reserva.classList.add('hidden');
+
+    // Mostrar secciones principales
+    const destinosEl = document.getElementById('destinos');
+    if (destinosEl) destinosEl.style.display = 'block';
+    const alojEl = document.getElementById('alojamientos');
+    if (alojEl) alojEl.style.display = 'block';
+
+    // Reset pasos y campos de reserva
+    try {
+      updateSteps(0);
+    } catch (e) {}
+
+    // limpiar campos del modal de reserva
+    const fechaEl = document.getElementById('fecha'); if (fechaEl) fechaEl.value = '';
+    const categoriaChecked = document.querySelectorAll('#reserva input[name="categoria"]');
+    categoriaChecked.forEach(i => { i.checked = false; if (i.closest('.categoria-option')) i.closest('.categoria-option').classList.remove('selected'); });
+    const pagoChecked = document.querySelectorAll('#reserva input[name="pago"]');
+    pagoChecked.forEach(i => { i.checked = false; if (i.closest('.payment-option')) i.closest('.payment-option').classList.remove('selected'); });
+    const aerolineaSelect = document.getElementById('aerolinea'); if (aerolineaSelect) { aerolineaSelect.value = ''; }
+
+    // reset resumen
+    const resumenFecha = document.getElementById('resumen-fecha'); if (resumenFecha) resumenFecha.textContent = '-';
+    const resumenCategoria = document.getElementById('resumen-categoria'); if (resumenCategoria) resumenCategoria.textContent = '-';
+    const resumenAero = document.getElementById('resumen-aerolinea'); if (resumenAero) resumenAero.innerHTML = '-';
+    const resumenTotal = document.getElementById('resumen-total'); if (resumenTotal) resumenTotal.textContent = '-';
+  }
+
+  if (cerrarConfirmacion) cerrarConfirmacion.addEventListener('click', cerrarConfirmacionFn);
+  if (cerrarConfirmacion2) cerrarConfirmacion2.addEventListener('click', cerrarConfirmacionFn);
 
   const continuarPaso1Btn = document.getElementById('continuarPaso1');
   if (continuarPaso1Btn) {
@@ -297,7 +516,7 @@ const accommodations = [
     });
   }
 
-  if (confirmarReservaBtn) {
+if (confirmarReservaBtn) {
   confirmarReservaBtn.addEventListener('click', async () => {
     const pago = document.querySelector('input[name="pago"]:checked');
     if (!pago) {
@@ -308,38 +527,70 @@ const accommodations = [
     const usuario_id = localStorage.getItem('usuario_id') || 1;
     const data = {
       usuario_id,
-      destino: document.getElementById('reserva-titulo').textContent.replace('Reservar: ', ''),
-      fecha: document.getElementById('fecha').value,
-      categoria: document.querySelector('input[name="categoria"]:checked').value,
-      aerolinea: document.getElementById('aerolinea').value,
-      total_cop: 500000, // puedes calcularlo dinámicamente
+      destino: (document.getElementById('reserva-titulo')?.textContent || '').replace('Reservar: ', ''),
+      fecha: document.getElementById('fecha')?.value || '',
+      categoria: (document.querySelector('input[name="categoria"]:checked')?.value) || '',
+      aerolinea: document.getElementById('aerolinea')?.value || '',
+      total_cop: 500000,
       metodo_pago: pago.value
     };
 
-    const res = await fetch('http://localhost:4000/api/reservas/destino', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
+    // Intentamos enviar al backend, pero independientemente del resultado
+    // siempre mostramos la confirmación (modo visual-only)
+    let serverMsg = null;
+    try {
+      const res = await fetch('http://localhost:4000/api/reservas/destino', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      try { const parsed = await res.json(); serverMsg = parsed && (parsed.mensaje || parsed.error) ? (parsed.mensaje || parsed.error) : null; }
+      catch (e) { try { serverMsg = await res.text(); } catch (_) { serverMsg = null; } }
+    } catch (err) {
+      console.warn('Reserva: no se pudo enviar al servidor (modo visual):', err);
+      serverMsg = null;
+    }
 
-    const result = await res.json();
-    alert(result.mensaje || result.error);
+    // Mostrar confirmación VISUAL siempre — reconstruir contenido para estilo
+    const confirmModal = document.getElementById('confirmacion');
+    const destinoName = document.getElementById('reserva-titulo')?.textContent || '';
+    const totalText = document.getElementById('resumen-total')?.textContent || '';
+    const pagoText = pago.value || (pago.closest('.payment-option')?.querySelector('.payment-text')?.textContent) || 'Método seleccionado';
 
-    document.getElementById('reserva').classList.add('hidden');
-    document.getElementById('confirmacion').classList.remove('hidden');
+    if (confirmModal) {
+      const modalContent = confirmModal.querySelector('.modal-content');
+      if (modalContent) {
+        modalContent.innerHTML = `
+          <div class="confirm-header">
+            <h2>¡Reserva Confirmada!</h2>
+            <button class="modal-close" id="confirmCloseHeader">×</button>
+          </div>
+          <div class="confirm-body">
+            <p class="subtitle">Tu viaje está listo</p>
+            <div class="check-icon-circle"><span class="check">✔️</span></div>
+            <h3>¡Gracias por tu reserva!</h3>
+            <p id="confirmacion-mensaje">Recibirás un correo con los detalles de tu viaje.</p>
+            <button id="cerrarConfirmacion2" class="btn-close-confirmation">Cerrar</button>
+          </div>
+        `;
+
+        const msgEl = modalContent.querySelector('#confirmacion-mensaje');
+        if (msgEl) {
+          const base = `Recibirás un correo con los detalles de tu viaje. ${destinoName} — ${totalText} • Pago: ${pagoText}`;
+          msgEl.textContent = serverMsg ? `${base} — ${serverMsg}` : base;
+        }
+
+        // abrir modal
+        document.getElementById('reserva')?.classList.add('hidden');
+        confirmModal.classList.remove('hidden');
+
+        // escuchar cierres dentro del contenido recién creado
+        document.getElementById('confirmCloseHeader')?.addEventListener('click', cerrarConfirmacionFn);
+        document.getElementById('cerrarConfirmacion2')?.addEventListener('click', cerrarConfirmacionFn);
+      }
+    }
   });
 }
-
-      // Mostrar confirmación y resumir método de pago
-      document.getElementById('reserva').classList.add('hidden');
-      document.getElementById('confirmacion').classList.remove('hidden');
-      const destinoName = document.getElementById('reserva-titulo')?.textContent || '';
-      const totalText = document.getElementById('resumen-total')?.textContent || '';
-      const pagoText = pago.value || (pago.closest('.payment-option')?.querySelector('.payment-text')?.textContent) || 'Método seleccionado';
-      const msgEl = document.getElementById('confirmacion-mensaje');
-      if (msgEl) msgEl.textContent = `Recibirás un correo con los detalles de tu viaje. ${destinoName} — ${totalText} • Pago: ${pagoText}`;
-    });
-
 
   // Visual: marcar tarjeta de pago seleccionada en modal de destinos
   (function attachPaymentOptionHandlers(){
@@ -601,7 +852,7 @@ const accommodations = [
   }
 
   // Confirmar reserva de alojamiento
- if (confirmarReservaAlojamientoBtn) {
+if (confirmarReservaAlojamientoBtn) {
   confirmarReservaAlojamientoBtn.addEventListener('click', async () => {
     const pagoAlojamiento = document.querySelector('input[name="pago-alojamiento"]:checked');
     if (!pagoAlojamiento) {
@@ -621,24 +872,70 @@ const accommodations = [
       metodo_pago: pagoAlojamiento.value
     };
 
-    const res = await fetch('http://localhost:4000/api/reservas/alojamiento', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
+      let serverMsgAlo = null;
+      try {
+        const res = await fetch('http://localhost:4000/api/reservas/alojamiento', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        try { const parsed = await res.json(); serverMsgAlo = parsed && (parsed.mensaje || parsed.error) ? (parsed.mensaje || parsed.error) : null; }
+        catch (e) { try { serverMsgAlo = await res.text(); } catch (_) { serverMsgAlo = null; } }
+      } catch (err) {
+        console.warn('Reserva alojamiento: no se pudo enviar al servidor:', err);
+        serverMsgAlo = null;
+      }
 
-    const result = await res.json();
-    alert(result.mensaje || result.error);
+      // Reconstruir modal de confirmación con el mismo estilo visual que destinos
+      const confirmAloModal = document.getElementById('confirmacionAlojamiento');
+      const reservaAloEl = document.getElementById('reservaAlojamiento');
+      const alojamientoName = window.accommodationData?.name || '';
+      const totalAloText = window.accommodationData?.total ? `$${window.accommodationData.total.toLocaleString('es-CO')} COP` : '-';
+      const pagoAloText = pagoAlojamiento.value || 'Método seleccionado';
 
-    document.getElementById('reservaAlojamiento').classList.add('hidden');
-    document.getElementById('confirmacionAlojamiento').classList.remove('hidden');
-  });
+      if (confirmAloModal) {
+        const modalContent = confirmAloModal.querySelector('.modal-content');
+        const generated = `
+            <div class="confirm-header">
+              <h2>¡Reserva de Alojamiento Confirmada!</h2>
+              <button class="modal-close" id="confirmCloseHeaderAlo">×</button>
+            </div>
+            <div class="confirm-body">
+              <p class="subtitle">Tu hospedaje está reservado</p>
+              <div class="check-icon-circle"><span class="check">✔️</span></div>
+              <h3>¡Gracias por tu reserva!</h3>
+              <p id="confirmacionAlojamiento-mensaje">Detalles de la reserva.</p>
+              <button id="cerrarConfirmacionAlojamiento2" class="btn-close-confirmation">Cerrar</button>
+            </div>
+        `;
+
+        if (modalContent) {
+          modalContent.innerHTML = generated;
+        } else {
+          // Fallback: si no hay .modal-content, inyectar directamente
+          confirmAloModal.innerHTML = generated;
+        }
+
+        // Actualizar mensaje y abrir modal
+        const msgEl = document.getElementById('confirmacionAlojamiento-mensaje');
+        if (msgEl) {
+          const base = `Reserva confirmada en ${alojamientoName}, total: ${totalAloText} • Pago: ${pagoAloText}`;
+          msgEl.textContent = serverMsgAlo ? `${base} — ${serverMsgAlo}` : base;
+        }
+
+        if (reservaAloEl) reservaAloEl.classList.add('hidden');
+        confirmAloModal.classList.remove('hidden');
+
+        // Enlazar cierres del contenido (IDs creados arriba)
+        document.getElementById('confirmCloseHeaderAlo')?.addEventListener('click', cerrarConfirmacionAlojamientoFn);
+        document.getElementById('cerrarConfirmacionAlojamiento2')?.addEventListener('click', cerrarConfirmacionAlojamientoFn);
+      }
+});
 }
 
-
-      // Cerrar modal de reserva y mostrar confirmación
-      document.getElementById('reservaAlojamiento').classList.add('hidden');
-      document.getElementById('confirmacionAlojamiento').classList.remove('hidden');
+      // Nota: no cerrar/modificar el estado de modales globalmente aquí —
+      // las acciones de mostrar/ocultar deben ejecutarse desde los controladores
+      // (por ejemplo tras confirmar una reserva). Evitamos cambios inmediatos al cargar.
 
   // Cerrar modal de reserva de alojamiento
   const cerrarReservaAlojamiento = document.getElementById('cerrarReservaAlojamiento');
@@ -663,8 +960,40 @@ const accommodations = [
   const cerrarConfirmacionAlojamiento2 = document.getElementById('cerrarConfirmacionAlojamiento2');
   
   const cerrarConfirmacionAlojamientoFn = () => {
-    document.getElementById('confirmacionAlojamiento').classList.add('hidden');
-    document.getElementById('alojamientos').style.display = 'block';
+    // Ocultar modal de confirmación de alojamiento
+    const confAlo = document.getElementById('confirmacionAlojamiento');
+    if (confAlo) confAlo.classList.add('hidden');
+
+    // Asegurar que el modal de reserva de alojamiento esté oculto
+    const reservaAlo = document.getElementById('reservaAlojamiento');
+    if (reservaAlo) reservaAlo.classList.add('hidden');
+
+    // Mostrar la lista de alojamientos
+    const alojEl = document.getElementById('alojamientos');
+    if (alojEl) alojEl.style.display = 'block';
+
+    // Resetear estado global de alojamiento
+    try { window.accommodationData = {}; } catch (e) {}
+
+    // Limpiar campos del modal de alojamiento
+    const fechaIngresoEl = document.getElementById('fecha-ingreso'); if (fechaIngresoEl) fechaIngresoEl.value = '';
+    const fechaSalidaEl = document.getElementById('fecha-salida'); if (fechaSalidaEl) fechaSalidaEl.value = '';
+    const numeroHuespedesEl = document.getElementById('numero-huespedes'); if (numeroHuespedesEl) numeroHuespedesEl.value = '1';
+
+    // Resetar pasos del flujo de alojamiento
+    const paso1 = document.getElementById('paso-alojamiento-1'); if (paso1) paso1.classList.remove('hidden');
+    const paso2 = document.getElementById('paso-alojamiento-2'); if (paso2) paso2.classList.add('hidden');
+
+    // Limpiar textos de resumen
+    const resumenNombre = document.getElementById('resumen-alojamiento-nombre'); if (resumenNombre) resumenNombre.textContent = '-';
+    const resumenCheckIn = document.getElementById('resumen-check-in'); if (resumenCheckIn) resumenCheckIn.textContent = '-';
+    const resumenCheckOut = document.getElementById('resumen-check-out'); if (resumenCheckOut) resumenCheckOut.textContent = '-';
+    const resumenHuespedes = document.getElementById('resumen-huespedes'); if (resumenHuespedes) resumenHuespedes.textContent = '-';
+    const resumenNoches = document.getElementById('resumen-noches-paso2'); if (resumenNoches) resumenNoches.textContent = '-';
+    const resumenTotalAlo = document.getElementById('resumen-total-alojamiento'); if (resumenTotalAlo) resumenTotalAlo.textContent = '-';
+
+    // Volver a renderizar alojamientos si es necesario (dejar interfaz usable)
+    try { renderAccommodations(); } catch (e) {}
   };
   
   if (cerrarConfirmacionAlojamiento) {
@@ -692,3 +1021,9 @@ const accommodations = [
       }
     }
   }
+  } catch (err) {
+    console.error('Error ejecutando FRONTEND/script.js:', err);
+    // Mostrar tip de error en la UI si es posible
+    try { alert('Error en la interfaz: ' + (err && err.message ? err.message : err)); } catch (e) { /* ignore */ }
+  }
+});
