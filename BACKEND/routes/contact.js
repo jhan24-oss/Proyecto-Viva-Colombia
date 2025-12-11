@@ -14,4 +14,15 @@ router.post('/', async (req, res) => {
   res.json({ ok: true, mensaje: 'Mensaje enviado con éxito' });
 });
 
+// Listar mensajes de contacto
+router.get('/', async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT id, nombre, email, telefono, asunto, mensaje, created_at FROM contactos ORDER BY created_at DESC');
+    res.json({ ok: true, contactos: rows });
+  } catch (err) {
+    console.error('Error listando contactos', err);
+    res.status(500).json({ error: 'Error listando contactos' });
+  }
+});
+
 module.exports = router;

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin - Viva Colombia (Lectura)</title>
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body>
+  <header>
+    <h1>Panel Admin (Lectura)</h1>
+    <p>Visualiza registros guardados por la aplicación. Solo lectura.</p>
+  </header>
+  <main>
+    <nav class="tabs">
+      <button data-view="usuarios" class="active">Usuarios</button>
+      <button data-view="destinos">Reservas Destinos</button>
+      <button data-view="alojamientos">Reservas Alojamientos</button>
+      <button data-view="contactos">Contactos</button>
+    </nav>
+
+    <section id="content">
+      <div id="loading">Cargando...</div>
+      <div id="error" class="hidden"></div>
+      <div id="table-container"></div>
+    </section>
+  </main>
+
+  <footer>
+    <small>Conecta al backend en <code>http://localhost:4000</code></small>
+  </footer>
+
+  <script src="admin.js"></script>
+</body>
+</html>

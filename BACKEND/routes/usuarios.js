@@ -38,4 +38,15 @@ router.post('/login', async (req, res) => {
   res.json({ ok: true, mensaje: 'Sesión iniciada', usuario: { id: usuario.id, email: usuario.email, nombre: usuario.nombre } });
 });
 
+// Listar usuarios (sin password) - uso administrativo
+router.get('/', async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT id, nombre, email, estado, fecha_creacion FROM usuarios ORDER BY id DESC');
+    res.json({ ok: true, usuarios: rows });
+  } catch (err) {
+    console.error('Error listando usuarios', err);
+    res.status(500).json({ error: 'Error listando usuarios' });
+  }
+});
+
 module.exports = router;

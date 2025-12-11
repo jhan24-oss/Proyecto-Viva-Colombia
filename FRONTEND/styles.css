@@ -121,7 +121,7 @@ section {
   border-radius: 10px;
 }
 
-#/* Estilos específicos para la confirmación visual */
+/* Estilos específicos para la confirmación visual */
 #confirmacion .modal-content, #confirmacionAlojamiento .modal-content {
   width: 720px;
   max-width: calc(100% - 40px);
@@ -397,6 +397,36 @@ section {
   font-size: 2.5rem;
   margin-bottom: 20px;
   color: #333;
+}
+
+/* Ajustes adicionales para el modal de autenticación (look como en las imágenes) */
+.auth-modal-content { max-width: 860px; width: 100%; }
+.auth-left { display: flex; flex-direction: column; justify-content: center; padding: 36px 48px; }
+.auth-right { display: flex; flex-direction: column; justify-content: center; padding: 36px 48px; }
+.auth-left h2, .auth-right h2 { margin-bottom: 6px; }
+.auth-left p, .auth-right p { margin-bottom: 18px; font-size: 0.98rem; }
+.auth-left { background: linear-gradient(180deg,#00b57a,#00a37a); }
+.auth-left .auth-panel { color: #fff; }
+.auth-right { background: #fff; }
+
+.auth-modal-content .auth-panel { width: 50%; box-sizing: border-box; }
+.auth-modal-content .btn-primary { width: 100%; }
+.auth-modal-content .btn-link { width: 100%; text-align: center; }
+
+.auth-panel input { font-size: 15px; }
+.auth-panel .icon { margin-right: 8px; }
+.input-icon { position: relative; }
+.input-icon .icon { left: 14px; top: 10px; position: absolute; }
+.input-icon input { padding-left: 44px; }
+
+/* Close button contrast */
+.auth-modal-content .modal-close { color: #fff; font-size: 26px; background: transparent; border: none; }
+
+/* Small screens adjustments */
+@media (max-width: 820px) {
+  .auth-modal-content { padding: 12px; }
+  .auth-modal-content .auth-panel { width: 100%; }
+  .auth-left { border-bottom: 1px solid rgba(0,0,0,0.06); }
 }
 
 .about-text p {

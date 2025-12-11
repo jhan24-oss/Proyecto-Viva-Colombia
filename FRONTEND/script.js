@@ -84,6 +84,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Alternar paneles desde los links dentro del modal
+  if (toRegister) {
+    toRegister.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (loginPanel) loginPanel.classList.add('hidden');
+      if (registerPanel) registerPanel.classList.remove('hidden');
+      setTimeout(() => { document.getElementById('regNombres')?.focus(); }, 50);
+    });
+  }
+  if (toLogin) {
+    toLogin.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (registerPanel) registerPanel.classList.add('hidden');
+      if (loginPanel) loginPanel.classList.remove('hidden');
+      setTimeout(() => { document.getElementById('loginEmail')?.focus(); }, 50);
+    });
+  }
+
+  // Cerrar modal con overlay o botón cerrar
+  if (authOverlay) {
+    authOverlay.addEventListener('click', () => { if (authModal) authModal.classList.add('hidden'); });
+  }
+  if (authClose) {
+    authClose.addEventListener('click', () => { if (authModal) authModal.classList.add('hidden'); });
+  }
+
   if (registerSubmit) {
     registerSubmit.addEventListener('click', async () => {
       const nombres = document.getElementById('regNombres')?.value || '';
@@ -1006,6 +1032,12 @@ if (confirmarReservaAlojamientoBtn) {
 
   // Render inicial de alojamientos
   renderAccommodations();
+
+  // Si hay usuario en localStorage, mostrar estado en navbar
+  try {
+    const storedName = localStorage.getItem('usuario_nombre');
+    if (storedName) updateNavbarUserState({ nombre: storedName });
+  } catch (e) {}
 
   // Función para actualizar indicador de pasos
   function updateSteps(currentStep) {
